@@ -1,0 +1,181 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+h1, h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.alerts {
+    list-style: none;
+    padding: 10px;
+    margin: 10px 0;
+    background-color: #fce4ec;
+    color: #c62828;
+    border-left: 5px solid #c62828;
+}
+
+form div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+form label {
+  width: 75%;
+  font-weight: bold;
+  margin: 0;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+form input,
+form select,
+form textarea {
+  flex: 1;
+  width: 25%;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+form {
+  width: 100%;
+  max-width: 800px;
+  background-color: rgb(152, 152, 248);
+  padding: 0.5em;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.recipe-row {
+  display: grid;
+  grid-template-columns: 1fr 100px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.recipe-row label {
+  width: 100%;
+  font-weight: bold;
+  margin: 0;
+}
+
+.recipe-row input {
+  width: 80px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.menu-action-row {
+  display: flex;
+  align-items: center; /* aligns everything vertically */
+  gap: 12px;            /* consistent spacing between all elements */
+  margin-top: 20px;
+}
+
+.menu-action-row select {
+  height: 36px;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.menu-action-row form {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  display: flex;
+  gap: 8px; /* ensures buttons inside form are spaced evenly */
+}
+
+.action-button {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+button {
+  display: inline-block;
+  margin-top: 20px;
+  background-color: #3498db;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.nav-button {
+  float: right;
+  margin-top: 20px;
+  color: #236591;
+}
+
+.delete-button {
+  background-color: #c00;
+  margin-top: 4px;
+}
+
+.edit-button {
+  background-color: #cc0;
+  color: black;
+  margin-top: 4px;
+}
+
+.view-button {
+  background-color: #0c0;
+  margin-top: 4px;
+}
+
+.macro-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+}
+.macro-table th, 
+.macro-table td {
+  border: 1px solid #ccc;
+  padding: 0.5em;
+  text-align: center;
+  background-color: #f4f4f4;
+  font-size: 1em;
+}
+
+/* Media query for laptops and larger devices */
+@media only screen and (min-width: 769px) {
+  body {
+    font-size: 1.1em;
+  }
+  .macro-table th,
+  .macro-table td {
+    font-size: 1rem;
+  padding: 0.4em 0.6em;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 1rem;
+  }
+}

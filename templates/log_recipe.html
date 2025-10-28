@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Recipe</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h1>Create a Recipe</h1>
+<form method="POST">
+  <label>Recipe Name</label>
+  <input type="text" name="name" required>
+  <br>
+  <label>Notes</label>
+  <input type="text" name="notes">
+
+  <h2>Ingredients</h2>
+  {% for ing in ingredients %}
+    <div class="recipe-row">
+    <label>{{ ing[1] }} ({{ ing[2] }} {{ ing[3] }})</label>
+    <input type="number" name="ingredient_{{ ing[0] }}" step="0.01">
+    </div>
+  {% endfor %}
+
+  <button type="submit">Save Recipe</button>
+  <a href="/" class="nav-button">Return to Summary</a>
+<a href="/summary" class="summary-link">Return to Summary</a></form>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class="alerts">
+      {% for message in messages %}
+        <li>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+</body>
+</html>

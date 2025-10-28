@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>View Menu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>{{ menu[0] }}</h1>
+    <p><strong>Date:</strong> {{ menu[1] }}</p>
+    <p><strong>Notes:</strong> {{ menu[2] }}</p>
+
+    <h2>Recipes</h2>
+    <ul>
+    {% for r in recipe_items %}
+        <li>{{ r[4] }} — {{ r[3] }} units × {{ r[1] }} portion</li>
+    {% endfor %}
+    </ul>
+
+    <h2>Ingredients</h2>
+    <ul>
+    {% for i in direct_items %}
+        <li>{{ i[0] }} — {{ i[1] }} units</li>
+    {% endfor %}
+    </ul>
+
+    <h2>Nutrition Totals</h2>
+    <ul>
+    <li>Calories: .. {{ totals.calories | round(1) }}</li>
+    <li>Protein: .... {{ totals.protein | round(1) }} g .. {{ totals.pct_prot }}%</li>
+    <li>Carbs: ...... {{ totals.carbs | round(1) }} g .. {{ totals.pct_carb }}%</li>
+    <li>Fat: ............ {{ totals.fat | round(1) }} g .. {{ totals.pct_fat }}%</li>
+    <li>Fiber: ......... {{ totals.fiber | round(1) }} g</li>
+    </ul>
+
+<div class="form-actions">
+  <a href="/" class="nav-button">Return to Summary</a>
+</div>
+</body>
+</html>

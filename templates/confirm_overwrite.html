@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirm overwrite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<h2>Entry Already Exists for {{ entry.date }}</h2>
+
+<table>
+  <tr>
+    <th>Metric</th>
+    <th>Existing</th>
+    <th>New</th>
+  </tr>
+  <tr>
+    <td>Weight</td>
+    <td>{{ existing.weight }}</td>
+    <td>{{ entry.weight }}</td>
+  </tr>
+  <tr>
+    <td>Body Fat</td>
+    <td>{{ existing.body_fat }}</td>
+    <td>{{ entry.body_fat }}</td>
+  </tr>
+  <tr>
+    <td>Visceral Fat</td>
+    <td>{{ existing.visceral_fat }}</td>
+    <td>{{ entry.visceral_fat }}</td>
+  </tr>
+</table>
+
+<form method="POST">
+  <button name="action" value="Replace">Replace</button>
+  <button name="action" value="Cancel">Cancel</button>
+</form></body>

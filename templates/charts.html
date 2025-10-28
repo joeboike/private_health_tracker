@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Metric Charts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<h2>30-Day Body Metrics Trend</h2>
+<canvas id="weightChart30" width="600" height="300"></canvas>
+
+<h2>90-Day Body Metrics Trend</h2>
+<canvas id="weightChart90" width="600" height="300"></canvas>
+
+<script>
+const dates3 = JSON.parse('{{ dates | safe }}');
+const weights3 = JSON.parse('{{ weights | safe }}');
+const bodyFats3 = JSON.parse('{{body_fats | safe}}');
+const viscFats3 = JSON.parse('{{visceral_fats | safe}}');
+
+const last30 = dates3.slice(-30);
+const weight30 = weights3.slice(-30);
+const bodyFats30 = bodyFats3.slice(-30);
+const viscFats30 = viscFats3.slice(-30);
+
+const dates9 = JSON.parse('{{ dates | safe }}');
+const weights9 = JSON.parse('{{ weights | safe }}');
+const bodyFats9 = JSON.parse('{{ body_fats | safe }}');
+const viscFats9 = JSON.parse('{{ visceral_fats | safe }}');
+
+const last90 = dates9.slice(-90);
+const weight90 = weights9.slice(-90);
+const bodyFats90 = bodyFats9.slice(-90);
+const viscFats90 = viscFats9.slice(-90);
+
+new Chart(document.getElementById('weightChart30'), {
+    type: 'line',
+    data: {
+        labels: last30,
+        datasets: [{
+            label: 'Weight (lbs)',
+            data: weight30,
+            borderColor: 'blue',
+            yAxisID: 'y-weight',
+            fill: false
+            },
+            {
+            label: 'Body Fat (%)',
+            data: bodyFats30,
+            borderColor: 'green',
+            yAxisID: 'y-fat',
+            fill: false
+            },
+            {
+            label: 'Visceral Fat',
+            data: viscFats30,
+            borderColor: 'brown',
+            yAxisID: 'y-fat',
+            fill: false
+            }
+        ]
+    },
+    options: {
+        scales: {
+            'y-weight': {
+                type: 'linear',
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Weight (lbs)'
+                }
+            },
+            'y-fat': {
+                type: 'linear',
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Body Fat (%)'
+                },
+                grid: {
+                    drawOnChartArea: false
+                }
+            }
+        }
+    }
+});
+
+new Chart(document.getElementById('weightChart90'), {
+    type: 'line',
+    data: {
+        labels: last90,
+        datasets: [
+            {
+                label: 'Weight (lbs)',
+                data: weight90,
+                borderColor: 'blue',
+                yAxisID: 'y-weight',
+                fill: false
+            },
+            {
+                label: 'Body Fat (%)',
+                data: bodyFats90,
+                borderColor: 'green',
+                yAxisID: 'y-fat',
+                fill: false
+            },
+            {
+                label: 'Visceral Fat',
+                data: viscFats90,
+                borderColor: 'brown',
+                yAxisID: 'y-fat',
+                fill: false
+            }
+        ]
+    },
+    options: {
+        scales: {
+            'y-weight': {
+                type: 'linear',
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Weight (lbs)'
+                }
+            },
+            'y-fat': {
+                type: 'linear',
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Body Fat (%)'
+                },
+                grid: {
+                    drawOnChartArea: false
+                }
+            }
+        }
+    }
+});
+</script>
+</body>
