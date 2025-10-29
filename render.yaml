@@ -2,5 +2,6 @@ services:
   - type: web
     name: diet-tracker
     env: python
-    buildCommand: ""
-    startCommand: "python app.py"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    
