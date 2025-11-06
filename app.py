@@ -158,7 +158,22 @@ def charts():
     """)
     rows = c.fetchall()
     conn.close()
-
+    '''indx=0
+    for r in rows:
+        if indx % 3 == 0:
+            dates90[indx] = r[0]
+            weights90[indx] = r[1]*0.25
+            body_fats90[indx] = r[2]*0.25
+            visceral_fats90[indx] = r[3]*0.25
+        elif indx % 3 == 1:
+            weights90[indx] += r[1]*0.5
+            body_fats90[indx] += r[2]*0.5
+            visceral_fats90[indx] += r[3]*0.5
+        elif indx % 3 == 2:
+            weights90[indx] += r[1]*0.25
+            body_fats90[indx] += r[2]*0.25
+            visceral_fats90[indx] += r[3]*0.25
+        print(dates90)'''
     dates = [r[0] for r in rows]
     weights = [r[1] for r in rows]
     body_fats = [r[2] for r in rows]
@@ -334,12 +349,23 @@ def get_daily_nutrition(c, start_date, end_date):
 def view_menu(menu_id):
     conn = sqlite3.connect("data/diet_tracker.db")
     c = conn.cursor()
-    
-    # Get menu info
-    c.execute("SELECT name, date, notes FROM menus WHERE id = ?", (menu_id,))
-    menu = c.fetchone()
 
-    # Get recipes in menu
+    # Get current menu
+    c.execute("SELECT id, name, date, notes FROM menus WHERE id = ?", (menu_id,))
+    menu = c.fetchone()
+    today = menu[2]
+
+    # Get previous menu
+    c.execute("SELECT id FROM menus WHERE date < ? ORDER BY date DESC LIMIT 1", (today,))
+    prev_menu = c.fetchone()
+    prev_id = prev_menu[0] if prev_menu else None
+
+    # Get next menu
+    c.execute("SELECT id FROM menus WHERE date > ? ORDER BY date ASC LIMIT 1", (today,))
+    next_menu = c.fetchone()
+    next_id = next_menu[0] if next_menu else None
+
+    # Get recipes
     c.execute("""
         SELECT r.name, mr.portion, ri.ingredient_id, ri.amount, i.name, 
               i.calories, i.protein_g, i.carbs_g, i.fiber_g, i.fat_g, i.quantity
@@ -375,7 +401,7 @@ def view_menu(menu_id):
 
     # calculate macro percentages
     per_prot = round((100*row[3] * 4) / row[1], 1) if row[1] else 0
-    per_carb = round((100*row[2] * 4) / row[1], 1) if row[1] else 0
+    per_carb = round((100*(row[2]-row[4]) * 4) / row[1], 1) if row[1] else 0
     per_fat  = round((100*row[5] * 9) / row[1], 1) if row[1] else 0
 
     totals = {"calories": row[1], 
@@ -387,7 +413,14 @@ def view_menu(menu_id):
                "pct_prot":per_prot,
                "pct_fat":per_fat }
 
-    return render_template("view_menu.html", menu=menu, recipe_items=recipe_items, direct_items=direct_items, totals=totals)
+    return render_template("view_menu.html",
+        menu=menu,
+        recipe_items=recipe_items,
+        direct_items=direct_items,
+        totals=totals,
+        prev_id=prev_id,
+        next_id=next_id
+    )
 
 @app.route("/edit/menu/<int:menu_id>", methods=["GET", "POST"])
 def edit_menu(menu_id):
@@ -502,20 +535,28 @@ def home():
     menus = c.fetchall()
 
     # Latest 7 days
+    end = date.today()
+    start = end - timedelta(days=6)
+
     c.execute("""
         SELECT AVG(weight), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date >= DATE('now', '-7 days')
-    """)
+        WHERE date BETWEEN ? AND ?
+    """, (start.isoformat(), end.isoformat()))
     latest = c.fetchone()
+    print(latest[0], latest[1], latest[2])
 
     # Previous 7 days
+    prev_end = start - timedelta(days=1)
+    prev_start = prev_end - timedelta(days=6)
+
     c.execute("""
         SELECT AVG(weight), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date >= DATE('now', '-14 days') AND date < DATE('now', '-7 days')
-    """)
+        WHERE date BETWEEN ? AND ?
+    """, (prev_start.isoformat(), prev_end.isoformat()))
     previous = c.fetchone()
+    print (previous[0], previous[1], previous[2])
 
     conn = sqlite3.connect("data/diet_tracker.db")
     c = conn.cursor()
@@ -531,7 +572,7 @@ def home():
     avg_prot = round(sum(row[3] for row in week_data) / len(week_data), 0)
     avg_fiber = round(sum(row[4] for row in week_data) / len(week_data), 0)
     avg_fat = round(sum(row[5] for row in week_data) / len(week_data), 0)
-    #print(avg_calories, avg_prot)
+    #print(avg_calories, avg_carbs, avg_prot)
 
     end = date.today() - timedelta(days=7)
     start = end - timedelta(days=6)
@@ -545,11 +586,11 @@ def home():
 
     # calculate macro percentages
     per_prot = (avg_prot  * 4) / avg_calories if avg_calories else 0
-    per_carb = (avg_carbs * 4) / avg_calories if avg_calories else 0
+    per_carb = ((avg_carbs - avg_fiber) * 4) / avg_calories if avg_calories else 0
     per_fat  = (avg_fat   * 9) / avg_calories if avg_calories else 0
 
     # Nutrition totals
-    totals = {"calories": avg_calories, 
+    '''totals = {"calories": avg_calories, 
               "carbs": avg_carbs, 
               "protein": avg_prot,
                "fiber": avg_fiber, 
@@ -557,7 +598,7 @@ def home():
                "prot_per":per_prot,
                "carb_per":per_carb,
                "fat_per":per_fat  }
-    print(totals)
+    print(totals)'''
 
     return render_template("summary.html",
         menus=menus,

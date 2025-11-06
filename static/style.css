@@ -64,7 +64,7 @@ form {
   display: grid;
   grid-template-columns: 1fr 100px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 0rem;
 }
 
 .recipe-row label {
@@ -84,14 +84,14 @@ form {
 .menu-action-row {
   display: flex;
   align-items: center; /* aligns everything vertically */
-  gap: 12px;            /* consistent spacing between all elements */
-  margin-top: 20px;
+  gap: 5rem;            /* consistent spacing between all elements */
+  margin-top: 1rem;
 }
 
 .menu-action-row select {
-  height: 36px;
-  padding: 4px 8px;
-  font-size: 14px;
+  height: 1.6rem;
+  padding: .2rem;
+  font-size: 1rem;
 }
 
 .menu-action-row form {

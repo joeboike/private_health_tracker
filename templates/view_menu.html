@@ -33,8 +33,22 @@
     <li>Fiber: ......... {{ totals.fiber | round(1) }} g</li>
     </ul>
 
-<div class="form-actions">
-  <a href="/" class="nav-button">Return to Summary</a>
-</div>
+    <div class="form-actions">
+    <table class="macro-table">
+    <tbody>
+        <tr><td>
+        {% if prev_id %}
+            <a href="{{ url_for('view_menu', menu_id=prev_id) }}" class="button">← Prev</a>
+        {% endif %}
+        </td><td>
+        <a href="/" class="button">Return to Summary</a>
+        </td><td>
+        {% if next_id %}
+            <a href="{{ url_for('view_menu', menu_id=next_id) }}" class="button">Next →</a>
+        {% endif %}
+    </td></tr>
+    </tbody>
+    </table>
+    </div>
 </body>
 </html>

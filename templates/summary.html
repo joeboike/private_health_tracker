@@ -46,7 +46,7 @@
         <td>{{ avg_protein }}</td>
         <td>{{ pct_protein }}%</td>
         <td>
-            {% if pct_protein >= 22 %}
+            {% if avg_protein >= 120 %}
             ✅
             {% else %}
             ❌
@@ -64,7 +64,7 @@
         <td>{{ avg_fat }}</td>
         <td>{{ pct_fat }}%</td>
         <td>
-            {% if pct_fat <= 27 %}
+            {% if pct_fat < 30 %}
             ✅
             {% else %}
             ❌
