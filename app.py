@@ -148,32 +148,46 @@ def confirm_change():
 
 @app.route("/charts")
 def charts():
+    # Latest 90 days
+    end = date.today()
+    start = end - timedelta(days=89)
+
     conn = sqlite3.connect("data/diet_tracker.db")
     c = conn.cursor()
     c.execute("""
         SELECT date, weight, body_fat, visceral_fat
         FROM body_metrics
-        WHERE date >= DATE('now', '-90 days')
+        WHERE date BETWEEN ? AND ?
         ORDER BY date ASC
-    """)
+    """, (start.isoformat(), end.isoformat()))
+    #    WHERE date >= DATE('now', '-89 days')
+    #""")
+
     rows = c.fetchall()
     conn.close()
-    '''indx=0
+    dates90=[]
+    weights90=[]
+    body_fats90=[]
+    visceral_fats90=[]
+    indx=0
     for r in rows:
-        if indx % 3 == 0:
-            dates90[indx] = r[0]
-            weights90[indx] = r[1]*0.25
-            body_fats90[indx] = r[2]*0.25
-            visceral_fats90[indx] = r[3]*0.25
-        elif indx % 3 == 1:
-            weights90[indx] += r[1]*0.5
-            body_fats90[indx] += r[2]*0.5
-            visceral_fats90[indx] += r[3]*0.5
-        elif indx % 3 == 2:
-            weights90[indx] += r[1]*0.25
-            body_fats90[indx] += r[2]*0.25
-            visceral_fats90[indx] += r[3]*0.25
-        print(dates90)'''
+        quot, remain = divmod(indx, 3)
+        if remain == 0:
+            dates90.append(r[0])  # Use first date as representative
+            weights90.append(r[1] * 0.25)
+            body_fats90.append(r[2] * 0.25)
+            visceral_fats90.append(r[3] * 0.25)
+        elif remain == 1:
+            weights90[quot] += r[1]*0.5
+            body_fats90[quot] += r[2]*0.5
+            visceral_fats90[quot] += r[3]*0.5
+        elif remain == 2:
+            weights90[quot] += r[1]*0.25
+            body_fats90[quot] += r[2]*0.25
+            visceral_fats90[quot] += r[3]*0.25
+            print(f"index:{quot} weight: {weights90[quot]}")
+        indx += 1
+    print(dates90)
     dates = [r[0] for r in rows]
     weights = [r[1] for r in rows]
     body_fats = [r[2] for r in rows]
@@ -183,7 +197,11 @@ def charts():
         dates=json.dumps(dates),
         weights=json.dumps(weights),
         body_fats=json.dumps(body_fats),
-        visceral_fats=json.dumps(visceral_fats)
+        visceral_fats=json.dumps(visceral_fats),
+        dates90=json.dumps(dates90),
+        weights90=json.dumps(weights90),
+        body_fats90=json.dumps(body_fats90),
+        visceral_fats90=json.dumps(visceral_fats90)
     )
 
 @app.route("/log/ingredient", methods=["GET", "POST"])

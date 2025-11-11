@@ -25,15 +25,15 @@ const weight30 = weights3.slice(-30);
 const bodyFats30 = bodyFats3.slice(-30);
 const viscFats30 = viscFats3.slice(-30);
 
-const dates9 = JSON.parse('{{ dates | safe }}');
-const weights9 = JSON.parse('{{ weights | safe }}');
-const bodyFats9 = JSON.parse('{{ body_fats | safe }}');
-const viscFats9 = JSON.parse('{{ visceral_fats | safe }}');
+const dates9 = JSON.parse('{{ dates90 | safe }}');
+const weights9 = JSON.parse('{{ weights90 | safe }}');
+const bodyFats9 = JSON.parse('{{ body_fats90 | safe }}');
+const viscFats9 = JSON.parse('{{ visceral_fats90 | safe }}');
 
-const last90 = dates9.slice(-90);
-const weight90 = weights9.slice(-90);
-const bodyFats90 = bodyFats9.slice(-90);
-const viscFats90 = viscFats9.slice(-90);
+const last90 = dates9.slice(-30);
+const weight90 = weights9.slice(-30);
+const bodyFats90 = bodyFats9.slice(-30);
+const viscFats90 = viscFats9.slice(-30);
 
 new Chart(document.getElementById('weightChart30'), {
     type: 'line',
