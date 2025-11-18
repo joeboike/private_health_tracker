@@ -1,21 +1,24 @@
 from flask import Flask, render_template, request, redirect, flash, session
 from datetime import date, timedelta
 import json
+import os
 import psycopg2
 
 app = Flask(__name__)
 app.secret_key = "My_$up3r_$3cr3t_K3y"  # Needed for flashing messagesimport sqlite3
-your_password_here="Password1"
+your_password_here="VX7sSpMrAQe5bxpl"     #"Password1" internal postgresql db
 
 def connect2DB():
-    conn = psycopg2.connect(
+    conn = psycopg2.connect(os.environ["DATABASEURL"])
+    return conn, conn.cursor()
+    '''conn = psycopg2.connect(
         dbname="thrivetrack",
         user="postgres",
         password=your_password_here,
         host="localhost",
         port="5432"
     )
-    return conn, conn.cursor()
+    return conn, conn.cursor()'''
 
 @app.route("/log/meals", methods=["GET", "POST"])
 def log_meals():
@@ -669,3 +672,4 @@ def home():
 
 if __name__ == "__main__":
     app.run(debug=True)
+    # suprabase database pw VX7sSpMrAQe5bxpl
