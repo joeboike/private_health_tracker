@@ -1,10 +1,21 @@
 from flask import Flask, render_template, request, redirect, flash, session
 from datetime import date, timedelta
 import json
-import sqlite3
+import psycopg2
 
 app = Flask(__name__)
 app.secret_key = "My_$up3r_$3cr3t_K3y"  # Needed for flashing messagesimport sqlite3
+your_password_here="Password1"
+
+def connect2DB():
+    conn = psycopg2.connect(
+        dbname="thrivetrack",
+        user="postgres",
+        password=your_password_here,
+        host="localhost",
+        port="5432"
+    )
+    return conn, conn.cursor()
 
 @app.route("/log/meals", methods=["GET", "POST"])
 def log_meals():
@@ -21,37 +32,40 @@ def log_meals():
 def log_metrics():
     if request.method == "POST":
         date = request.form["date"]
-        weight = request.form["weight"]
+        weight = float(request.form["weight"])
+        muscle_pct = float(request.form["muscle_pct"])
         body_fat = request.form["body_fat"]
         visceral_fat = request.form["visceral_fat"]
+        muscle = weight * muscle_pct / 100.0
 
-        conn = sqlite3.connect("data/diet_tracker.db")
-        c = conn.cursor()
+        conn, c = connect2DB()  # ... use c to query ...
 
         # Check if entry for this date already exists
-        c.execute("SELECT * FROM body_metrics WHERE date = ?", (date,))
+        c.execute("SELECT * FROM body_metrics WHERE date = %s", (date,))
         existing = c.fetchone()
 
         if existing:
             session["pending_entry"] = {
                 "date": date,
                 "weight": weight,
+                "muscle_mass": muscle,
                 "body_fat": body_fat,
                 "visceral_fat": visceral_fat
             }
             session["existing_entry"] = {
                 "date": existing[1],
                 "weight": existing[2],
-                "body_fat": existing[3],
-                "visceral_fat": existing[4]
+                "muscle_mass":existing[3],
+                "body_fat": existing[4],
+                "visceral_fat": existing[5]
             }
             return redirect("/confirm_overwrite")
         
         # Get previous entry
         c.execute("""
-            SELECT weight, body_fat, visceral_fat
+            SELECT weight, muscle_mass, body_fat, visceral_fat
             FROM body_metrics
-            WHERE date < ?
+            WHERE date < %s
             ORDER BY date DESC
             LIMIT 1
         """, (date,))
@@ -60,9 +74,11 @@ def log_metrics():
         # Compare and flash alerts
         thresholds_exceeded = []
         if previous:
-            prev_weight, prev_body_fat, prev_visc_fat = previous
+            prev_weight, prev_muscle, prev_body_fat, prev_visc_fat = previous
             if abs(float(weight) - prev_weight) > 5:
                 thresholds_exceeded.append("Weight")
+            if abs(float(muscle) - prev_muscle) > 5:
+                thresholds_exceeded.append("Muscle")
             if abs(float(body_fat) - prev_body_fat) > 3:
                 thresholds_exceeded.append("Body Fat")
             if abs(float(visceral_fat) - prev_visc_fat) > 3:
@@ -72,11 +88,13 @@ def log_metrics():
                 session["pending_entry"] = {
                     "date": date,
                     "weight": weight,
+                    "muscle_mass": muscle,
                     "body_fat": body_fat,
                     "visceral_fat": visceral_fat
                 }
                 session["previous_entry"] = {
                     "weight": prev_weight,
+                    "muscle_mass": prev_muscle,
                     "body_fat": prev_body_fat,
                     "visceral_fat": prev_visc_fat
                 }
@@ -84,9 +102,9 @@ def log_metrics():
                 return redirect("/confirm_change")
 
         c.execute("""
-            INSERT INTO body_metrics (date, weight, body_fat, visceral_fat)
-            VALUES (?, ?, ?, ?)
-        """, (date, weight, body_fat, visceral_fat))
+            INSERT INTO body_metrics (date, weight, muscle_mass, body_fat, visceral_fat)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (date, weight, muscle, body_fat, visceral_fat))
         conn.commit()
         conn.close()
 
@@ -98,13 +116,12 @@ def confirm_overwrite():
     if request.method == "POST":
         if request.form["action"] == "Replace":
             entry = session.pop("pending_entry")
-            conn = sqlite3.connect("data/diet_tracker.db")
-            c = conn.cursor()
+            conn, c = connect2DB()  # ... use c to query ...
             c.execute("""
                 UPDATE body_metrics
-                SET weight = ?, body_fat = ?, visceral_fat = ?
-                WHERE date = ?
-            """, (entry["weight"], entry["body_fat"], entry["visceral_fat"], entry["date"]))
+                SET weight = %s, muscle_mass = %s, body_fat = %s, visceral_fat = %s
+                WHERE date = %s
+            """, (entry["weight"], entry["muscle_mass"], entry["body_fat"], entry["visceral_fat"], entry["date"]))
             conn.commit()
             conn.close()
             if "pending_entry" in session:
@@ -126,12 +143,11 @@ def confirm_change():
     if request.method == "POST":
         if request.form["action"] == "Confirm":
             entry = session.pop("pending_entry")
-            conn = sqlite3.connect("data/diet_tracker.db")
-            c = conn.cursor()
+            conn, c = connect2DB()  # ... use c to query ...
             c.execute("""
-                INSERT INTO body_metrics (date, weight, body_fat, visceral_fat)
-                VALUES (?, ?, ?, ?)
-            """, (entry["date"], entry["weight"], entry["body_fat"], entry["visceral_fat"]))
+                INSERT INTO body_metrics (date, weight, muscle_mass, body_fat, visceral_fat)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (entry["date"], entry["weight"], entry["muscle_mass"], entry["body_fat"], entry["visceral_fat"]))
             conn.commit()
             conn.close()
             flash("✅ Entry added for " + entry["date"])
@@ -152,55 +168,67 @@ def charts():
     end = date.today()
     start = end - timedelta(days=89)
 
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
     c.execute("""
-        SELECT date, weight, body_fat, visceral_fat
+        SELECT date, weight, muscle_mass, body_fat, visceral_fat
         FROM body_metrics
-        WHERE date BETWEEN ? AND ?
+        WHERE date BETWEEN %s AND %s
         ORDER BY date ASC
     """, (start.isoformat(), end.isoformat()))
-    #    WHERE date >= DATE('now', '-89 days')
-    #""")
-
     rows = c.fetchall()
     conn.close()
+
     dates90=[]
     weights90=[]
+    muscle90=[]
     body_fats90=[]
+    body_fat_lb90=[]
     visceral_fats90=[]
     indx=0
     for r in rows:
         quot, remain = divmod(indx, 3)
         if remain == 0:
-            dates90.append(r[0])  # Use first date as representative
+            dates90.append(r[0].isoformat())  # Use first date as representative
             weights90.append(r[1] * 0.25)
-            body_fats90.append(r[2] * 0.25)
-            visceral_fats90.append(r[3] * 0.25)
+            muscle90.append( r[2] * 0.25)
+            body_fats90.append(r[3] * 0.25)
+            body_fat_lb90.append(r[1] * r[3] * 0.25 / 100)
+            visceral_fats90.append(r[4] * 0.25)
         elif remain == 1:
             weights90[quot] += r[1]*0.5
-            body_fats90[quot] += r[2]*0.5
-            visceral_fats90[quot] += r[3]*0.5
+            muscle90[quot]  += r[2]*0.5
+            body_fats90[quot] += r[3]*0.5
+            body_fat_lb90[quot] += (r[1] * r[3] * 0.5 / 100)
+            visceral_fats90[quot] += r[4]*0.5
         elif remain == 2:
             weights90[quot] += r[1]*0.25
-            body_fats90[quot] += r[2]*0.25
-            visceral_fats90[quot] += r[3]*0.25
-            print(f"index:{quot} weight: {weights90[quot]}")
+            muscle90[quot]  += r[2]*0.25
+            body_fats90[quot] += r[3]*0.25
+            body_fat_lb90[quot] += (r[1] * r[3] * 0.25 / 100)
+            visceral_fats90[quot] += r[4]*0.25
+            #print(f"index:{quot} weight: {weights90[quot]}")
         indx += 1
-    print(dates90)
-    dates = [r[0] for r in rows]
+
+    #print(dates90)
+    dates = [r[0].isoformat() for r in rows]
     weights = [r[1] for r in rows]
-    body_fats = [r[2] for r in rows]
-    visceral_fats = [r[3] for r in rows]
+    muscle  = [r[2] for r in rows]
+    body_fats = [r[3] for r in rows]
+    body_fat_lb = [r[1] * r[3] / 100.0 for r in rows]
+    visceral_fats = [r[4] for r in rows]
 
     return render_template("charts.html",
         dates=json.dumps(dates),
         weights=json.dumps(weights),
+        muscle_lb=json.dumps(muscle),
         body_fats=json.dumps(body_fats),
+        body_fat_lb=json.dumps(body_fat_lb),
         visceral_fats=json.dumps(visceral_fats),
         dates90=json.dumps(dates90),
         weights90=json.dumps(weights90),
+        muscle_lb90=json.dumps(muscle90),
         body_fats90=json.dumps(body_fats90),
+        body_fat_lb90=json.dumps(body_fat_lb90),
         visceral_fats90=json.dumps(visceral_fats90)
     )
 
@@ -218,11 +246,10 @@ def log_ingredient():
             request.form.get("carbs_g"),
             request.form.get("notes")
         )
-        conn = sqlite3.connect("data/diet_tracker.db")
-        c = conn.cursor()
+        conn, c = connect2DB()  # ... use c to query ...
         c.execute("""
             INSERT INTO ingredients (name, quantity, unit, calories, protein_g, fiber_g, fat_g, carbs_g, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, data)
         conn.commit()
         conn.close()
@@ -231,8 +258,7 @@ def log_ingredient():
 
 @app.route("/log/recipe", methods=["GET", "POST"])
 def log_recipe():
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
     c.execute("SELECT id, name, quantity, unit FROM ingredients ORDER BY name")
     ingredients = c.fetchall()
 
@@ -241,7 +267,7 @@ def log_recipe():
         notes = request.form.get("notes")
 
         # Insert recipe
-        c.execute("INSERT INTO recipes (name, notes) VALUES (?, ?)", (name, notes))
+        c.execute("INSERT INTO recipes (name, notes) VALUES (%s, %s)", (name, notes))
         recipe_id = c.lastrowid
 
         # Insert recipe items
@@ -252,7 +278,7 @@ def log_recipe():
                 if amount:
                     c.execute("""
                         INSERT INTO recipe_items (recipe_id, ingredient_id, amount)
-                        VALUES (?, ?, ?)
+                        VALUES (%s, %s, %s)
                     """, (recipe_id, ing_id, float(amount)))
 
         conn.commit()
@@ -265,8 +291,7 @@ def log_recipe():
 
 @app.route("/log/daily_menu", methods=["GET", "POST"])
 def log_daily_menu():
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
 
     # Get recipes and ingredients
     c.execute("SELECT id, name FROM recipes ORDER BY name")
@@ -281,8 +306,8 @@ def log_daily_menu():
         notes = request.form.get("notes")
 
         # Insert menu
-        c.execute("INSERT INTO menus (name, date, notes) VALUES (?, ?, ?)", (name, date, notes))
-        menu_id = c.lastrowid
+        c.execute("INSERT INTO menus (name, date, notes) VALUES (%s, %s, %s) RETURNING id", (name, date, notes))
+        menu_id = c.fetchone()[0]
 
         # Add selected recipes
         for key in request.form:
@@ -292,7 +317,7 @@ def log_daily_menu():
                 if portion_str.strip():  # skip empty or whitespace-only
                     portion = float(portion_str)
                     if portion > 0:
-                        c.execute("INSERT INTO menu_recipes (menu_id, recipe_id, portion) VALUES (?, ?, ?)",
+                        c.execute("INSERT INTO menu_recipes (menu_id, recipe_id, portion) VALUES (%s, %s, %s)",
                                 (menu_id, recipe_id, portion))
 
         # Add selected ingredients
@@ -302,7 +327,7 @@ def log_daily_menu():
                 amount_str = request.form[key]
                 if amount_str.strip():
                     amount = float(amount_str)
-                    c.execute("INSERT INTO menu_items (menu_id, ingredient_id, amount) VALUES (?, ?, ?)",
+                    c.execute("INSERT INTO menu_items (menu_id, ingredient_id, amount) VALUES (%s, %s, %s)",
                             (menu_id, ing_id, amount))
 
         conn.commit()
@@ -317,11 +342,11 @@ def log_daily_menu():
 def get_daily_nutrition(c, start_date, end_date):
     c.execute("""
         WITH RECURSIVE date_range(date) AS (
-            SELECT DATE(?)
+            SELECT %s::DATE
             UNION ALL
-            SELECT DATE(date, '+1 day')
+            SELECT (date + INTERVAL '1 day')::DATE
             FROM date_range
-            WHERE date < DATE(?)
+            WHERE date < %s::DATE
         ),
         recipe_nutrition AS (
             SELECT m.date,
@@ -334,7 +359,7 @@ def get_daily_nutrition(c, start_date, end_date):
             JOIN menu_recipes mr ON m.id = mr.menu_id
             JOIN recipe_items ri ON mr.recipe_id = ri.recipe_id
             JOIN ingredients i ON ri.ingredient_id = i.id
-            WHERE m.date BETWEEN DATE(?) AND DATE(?)
+            WHERE m.date BETWEEN %s::DATE AND %s::DATE
             GROUP BY m.date
         ),
         item_nutrition AS (
@@ -347,7 +372,7 @@ def get_daily_nutrition(c, start_date, end_date):
             FROM menus m
             JOIN menu_items mi ON m.id = mi.menu_id
             JOIN ingredients i ON mi.ingredient_id = i.id
-            WHERE m.date BETWEEN DATE(?) AND DATE(?)
+            WHERE m.date BETWEEN %s::DATE AND %s::DATE
             GROUP BY m.date
         )
         SELECT
@@ -365,21 +390,20 @@ def get_daily_nutrition(c, start_date, end_date):
 
 @app.route("/view/menu/<int:menu_id>")
 def view_menu(menu_id):
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
 
     # Get current menu
-    c.execute("SELECT id, name, date, notes FROM menus WHERE id = ?", (menu_id,))
+    c.execute("SELECT id, name, date, notes FROM menus WHERE id = %s", (menu_id,))
     menu = c.fetchone()
     today = menu[2]
 
     # Get previous menu
-    c.execute("SELECT id FROM menus WHERE date < ? ORDER BY date DESC LIMIT 1", (today,))
+    c.execute("SELECT id FROM menus WHERE date < %s ORDER BY date DESC LIMIT 1", (today,))
     prev_menu = c.fetchone()
     prev_id = prev_menu[0] if prev_menu else None
 
     # Get next menu
-    c.execute("SELECT id FROM menus WHERE date > ? ORDER BY date ASC LIMIT 1", (today,))
+    c.execute("SELECT id FROM menus WHERE date > %s ORDER BY date ASC LIMIT 1", (today,))
     next_menu = c.fetchone()
     next_id = next_menu[0] if next_menu else None
 
@@ -391,7 +415,7 @@ def view_menu(menu_id):
         JOIN recipes r ON mr.recipe_id = r.id
         JOIN recipe_items ri ON ri.recipe_id = r.id
         JOIN ingredients i ON ri.ingredient_id = i.id
-        WHERE mr.menu_id = ?
+        WHERE mr.menu_id = %s
     """, (menu_id,))
     recipe_items = c.fetchall()
 
@@ -400,18 +424,13 @@ def view_menu(menu_id):
         SELECT i.name, mi.amount, i.calories, i.protein_g, i.carbs_g, i.fiber_g, i.fat_g, i.quantity
         FROM menu_items mi
         JOIN ingredients i ON mi.ingredient_id = i.id
-        WHERE mi.menu_id = ?
+        WHERE mi.menu_id = %s
     """, (menu_id,))
     direct_items = c.fetchall()
 
     # Nutrition totals
-    c.execute("SELECT name, date, notes FROM menus WHERE id = ?", (menu_id,))
-    menu = c.fetchone()
-
-    today = menu[1]
     daily_data = get_daily_nutrition(c, today, today)
     #print(daily_data)
-
     conn.close()
 
     # Nutrition totals
@@ -442,43 +461,48 @@ def view_menu(menu_id):
 
 @app.route("/edit/menu/<int:menu_id>", methods=["GET", "POST"])
 def edit_menu(menu_id):
-    conn = sqlite3.connect("data/diet_tracker.db")
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
 
+    print(f"menu ID: {menu_id}")
     if request.method == "POST":
         # Update menu metadata
         name = request.form["name"]
         date = request.form["date"]
         notes = request.form["notes"]
-        c.execute("UPDATE menus SET name = ?, date = ?, notes = ? WHERE id = ?", (name, date, notes, menu_id))
+        c.execute("UPDATE menus SET name = %s, date = %s, notes = %s WHERE id = %s", (name, date, notes, menu_id))
 
         # Clear old entries
-        c.execute("DELETE FROM menu_recipes WHERE menu_id = ?", (menu_id,))
-        c.execute("DELETE FROM menu_items WHERE menu_id = ?", (menu_id,))
+        c.execute("DELETE FROM menu_recipes WHERE menu_id = %s", (menu_id,))
+        c.execute("DELETE FROM menu_items WHERE menu_id = %s", (menu_id,))
 
         # Re-insert updated recipes
         c.execute("SELECT id FROM recipes")
-        for row in c.fetchall():
-            recipe_id = row["id"]
+        recipeList = c.fetchall()
+        for row in recipeList: #c.fetchall():
+            recipe_id = row[0]
             key = f"recipe_{recipe_id}"
             portion_str = request.form.get(key, "").strip()
             if portion_str:
                 portion = float(portion_str)
                 if portion > 0:
-                    c.execute("INSERT INTO menu_recipes (menu_id, recipe_id, portion) VALUES (?, ?, ?)",
+                    c.execute("INSERT INTO menu_recipes (menu_id, recipe_id, portion) VALUES (%s, %s, %s)",
                               (menu_id, recipe_id, portion))
+        for row in recipeList:
+            print(row)
 
         # Re-insert updated ingredients
         c.execute("SELECT id FROM ingredients")
-        for row in c.fetchall():
-            ing_id = row["id"]
+        ingList = c.fetchall()
+        for row in ingList: #c.fetchall():
+            ing_id = row[0]
             key = f"ingredient_{ing_id}"
             amount_str = request.form.get(key, "").strip()
             if amount_str:
                 amount = float(amount_str)
-                c.execute("INSERT INTO menu_items (menu_id, ingredient_id, amount) VALUES (?, ?, ?)",
+                c.execute("INSERT INTO menu_items (menu_id, ingredient_id, amount) VALUES (%s, %s, %s)",
                           (menu_id, ing_id, amount))
+        for row in ingList:
+            print(row)
 
         conn.commit()
         conn.close()
@@ -486,7 +510,7 @@ def edit_menu(menu_id):
         return redirect(f"/view/menu/{menu_id}")
 
     # GET: Load menu and prefill form
-    c.execute("SELECT name, date, notes FROM menus WHERE id = ?", (menu_id,))
+    c.execute("SELECT name, date, notes FROM menus WHERE id = %s", (menu_id,))
     menu = c.fetchone()
 
     c.execute("SELECT id, name FROM recipes ORDER BY name")
@@ -496,25 +520,29 @@ def edit_menu(menu_id):
     ingredients = c.fetchall()
 
     # Get existing portions
-    c.execute("SELECT recipe_id, portion FROM menu_recipes WHERE menu_id = ?", (menu_id,))
-    recipe_portions = {row["recipe_id"]: row["portion"] for row in c.fetchall()}
+    c.execute("SELECT recipe_id, portion FROM menu_recipes WHERE menu_id = %s", (menu_id,))
+    recipe_portions = {row[0]: row[1] for row in c.fetchall()}
 
-    c.execute("SELECT ingredient_id, amount FROM menu_items WHERE menu_id = ?", (menu_id,))
-    ingredient_amounts = {row["ingredient_id"]: row["amount"] for row in c.fetchall()}
+    c.execute("SELECT ingredient_id, amount FROM menu_items WHERE menu_id = %s", (menu_id,))
+    ingredient_amounts = {row[0]: row[1] for row in c.fetchall()}
 
     conn.close()
-    return render_template("edit_menu.html", menu=menu, recipes=recipes, ingredients=ingredients,
-                           recipe_portions=recipe_portions, ingredient_amounts=ingredient_amounts)
+    return render_template("edit_menu.html", 
+            menu=menu,
+            menu_id=menu_id, 
+            recipes=recipes, 
+            ingredients=ingredients,
+            recipe_portions=recipe_portions, 
+            ingredient_amounts=ingredient_amounts)
 
 @app.route("/delete/menu/<int:menu_id>", methods=["POST"])
 def delete_menu(menu_id):
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
 
     # Delete linked entries first
-    c.execute("DELETE FROM menu_recipes WHERE menu_id = ?", (menu_id,))
-    c.execute("DELETE FROM menu_items WHERE menu_id = ?", (menu_id,))
-    c.execute("DELETE FROM menus WHERE id = ?", (menu_id,))
+    c.execute("DELETE FROM menu_recipes WHERE menu_id = %s", (menu_id,))
+    c.execute("DELETE FROM menu_items WHERE menu_id = %s", (menu_id,))
+    c.execute("DELETE FROM menus WHERE id = %s", (menu_id,))
 
     conn.commit()
     conn.close()
@@ -522,7 +550,6 @@ def delete_menu(menu_id):
     return redirect("/")
 
 def limit_flag(value, min_limit, max_limit):
-    print(f"viceral {value}")
     if value is None:
         return ""
     if value < min_limit:
@@ -544,9 +571,7 @@ def arrow(new, old):
 
 @app.route("/")
 def home():
-    conn = sqlite3.connect("data/diet_tracker.db")
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
+    conn, c = connect2DB()  # ... use c to query ...
 
     # items for macronutrient summary
     c.execute("SELECT id, name, date FROM menus ORDER BY date DESC")
@@ -557,28 +582,25 @@ def home():
     start = end - timedelta(days=6)
 
     c.execute("""
-        SELECT AVG(weight), AVG(body_fat), AVG(visceral_fat)
+        SELECT AVG(weight), AVG(muscle_mass), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date BETWEEN ? AND ?
+        WHERE date BETWEEN %s AND %s
     """, (start.isoformat(), end.isoformat()))
     latest = c.fetchone()
-    print(latest[0], latest[1], latest[2])
+    #print(f"Latest avg: {round(latest[0],3)}, {round(latest[1],3)}, {round(latest[2],3)}")
 
     # Previous 7 days
     prev_end = start - timedelta(days=1)
     prev_start = prev_end - timedelta(days=6)
 
     c.execute("""
-        SELECT AVG(weight), AVG(body_fat), AVG(visceral_fat)
+        SELECT AVG(weight), AVG(muscle_mass), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date BETWEEN ? AND ?
+        WHERE date BETWEEN %s AND %s
     """, (prev_start.isoformat(), prev_end.isoformat()))
     previous = c.fetchone()
-    print (previous[0], previous[1], previous[2])
+    #print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}")
 
-    conn = sqlite3.connect("data/diet_tracker.db")
-    c = conn.cursor()
-    
     end = date.today()
     start = end - timedelta(days=6)
     week_data = get_daily_nutrition(c, start.isoformat(), end.isoformat())
@@ -622,12 +644,14 @@ def home():
         menus=menus,
         avg_weight=round(latest[0], 1) if latest[0] else "—",
         weight_arrow=arrow(latest[0], previous[0]),
-        avg_body_fat=round(latest[1], 1) if latest[1] else "—",
-        body_fat_arrow=arrow(latest[1], previous[1]),
-        body_fat_flag=limit_flag(latest[1], 25, 30),
-        avg_visceral_fat=round(latest[2], 1) if latest[2] else "—",
-        visceral_fat_arrow=arrow(latest[2], previous[2]),
-        visceral_fat_flag=limit_flag(latest[2], 10, 14),
+        avg_musclemass=round(latest[1], 1) if latest[1] else "—",
+        musclemass_arrow=arrow(latest[1], previous[1]),
+        avg_body_fat=round(latest[2], 1) if latest[2] else "—",
+        body_fat_arrow=arrow(latest[2], previous[2]),
+        body_fat_flag=limit_flag(latest[2], 25, 30),
+        avg_visceral_fat=round(latest[3], 1) if latest[3] else "—",
+        visceral_fat_arrow=arrow(latest[3], previous[3]),
+        visceral_fat_flag=limit_flag(latest[3], 10, 14),
         avg_calories=avg_calories,
         calories_arrow=arrow(avg_calories, avg_calories_prev),
         avg_carbs=avg_carbs,
