@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: diet-tracker
+    env: python
+    plan: free
+    region: newyork
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    

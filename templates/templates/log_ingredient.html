@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add Ingredient</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <form method="POST" action="/log/ingredient">
+    <div>
+        <label>Name</label>
+        <input type="text" name="name" required>
+    </div>
+
+    <div>
+        <label>Quantity</label>
+        <input type="number" name="quantity" step="0.01" required>
+    </div>
+
+    <div>
+        <label>U n i t</label>
+        <select name="unit">
+        <option value="tsp">tsp</option>
+        <option value="tbsp">tbsp</option>
+        <option value="g">g</option>
+        <option value="oz">oz</option>
+        <option value="cup">cup</option>
+        <option value="ea">each</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Calories</label>
+        <input type="number" name="calories" step="0.1">
+    </div>
+
+    <div>
+        <label>Protein (g)</label>
+        <input type="number" name="protein_g" step="0.1">
+    </div>
+
+    <div>
+        <label>Fiber (g)</label>
+        <input type="number" name="fiber_g" step="0.1">
+    </div>
+
+    <div>
+        <label>Fat (g)</label>
+        <input type="number" name="fat_g" step="0.1">
+    </div>
+
+    <div>
+        <label>Carbs (g)</label>
+        <input type="number" name="carbs_g" step="0.1">
+    </div>
+
+    <div>
+        <label>Notes</label>
+        <input type="text" name="notes">
+    </div>
+
+        <button type="submit">Add Ingredient</button>
+        <a href="/" class="nav-button">Return to Summary</a>
+    </form>
+</body>
+</html>
