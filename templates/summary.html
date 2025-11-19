@@ -17,6 +17,11 @@
         <td>{{ weight_arrow }}</td>
         </tr>
         <tr>
+        <td>Muscle Mass</td>
+        <td>{{ avg_musclemass }} lbs</td>
+        <td>{{ musclemass_arrow }}</td>
+        </tr>
+        <tr>
         <td>Body Fat </td>
         <td>{{ avg_body_fat }}%</td>
         <td>{{ body_fat_arrow }} {{ body_fat_flag }}</td>
@@ -100,7 +105,7 @@
         <!-- Shared dropdown -->
         <select id="menuSelect">
             {% for menu in menus %}
-            <option value="{{ menu.id }}">{{ menu.date }}: {{ menu.name }}</option>
+            <option value="{{ menu[0] }}">{{ menu[2].isoformat() }}: {{ menu[1] }}</option>
             {% endfor %}
         </select>
         </div>

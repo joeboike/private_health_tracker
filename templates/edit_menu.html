@@ -7,35 +7,35 @@
 </head>
 <body>
 <h1>Edit Menu</h1>
-<form method="POST">
+<form method="POST" action="/edit/menu/{{ menu_id }}">
   <div class="form-column">
     <label>Menu Name</label>
-    <input type="text" name="name" value="{{ menu.name }}">   
+    <input type="text" name="name" value="{{ menu[0] }}">   
   </div>
 
   <div class="form-column">
   <label>Date</label> 
-  <input type="date" name="date" value="{{ menu.date }}">
+  <input type="date" name="date" value="{{ menu[1].isoformat() }}">
   </div>
 
   <div>
   <label>Notes</label>
-  <textarea name="notes">{{ menu.notes }}</textarea><br>
+  <textarea name="notes">{{ menu[2] }}</textarea><br>
   </div>
 
   <h2>Recipes</h2>
   {% for r in recipes %}
     <div class="recipe-row">
-    <label>{{ r.name }}</label>
-    <input type="text" name="recipe_{{ r.id }}" value="{{ recipe_portions.get(r.id, '') }}"><br>
+    <label>{{ r[1] }}</label>
+    <input type="text" name="recipe_{{ r[0] }}" value="{{ recipe_portions.get(r[0], '') }}"><br>
     </div>
   {% endfor %}
 
   <h2>Ingredients</h2>
   {% for i in ingredients %}
     <div class="recipe-row">
-    <label>{{ i.name }}</label>
-    <input type="text" name="ingredient_{{ i.id }}" value="{{ ingredient_amounts.get(i.id, '') }}"><br>
+    <label>{{ i[1] }}</label>
+    <input type="text" name="ingredient_{{ i[0] }}" value="{{ ingredient_amounts.get(i[0], '') }}"><br>
     </div>
   {% endfor %}
 
