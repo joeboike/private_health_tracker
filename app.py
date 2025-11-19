@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = "My_$up3r_$3cr3t_K3y"  # Needed for flashing messagesimport sqlite3
 your_password_here="VX7sSpMrAQe5bxpl"     #"Password1" internal postgresql db
 
-def connect2DB():
+def connect2DB() :
     conn = psycopg2.connect(os.environ["DATABASEURL"])
     return conn, conn.cursor()
     '''conn = psycopg2.connect(
