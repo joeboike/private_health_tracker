@@ -1,3 +1,5 @@
+build:
+    pythonVersion: 3.11
 services:
   - type: web
     name: diet-tracker
