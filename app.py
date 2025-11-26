@@ -175,7 +175,7 @@ def charts():
     c.execute("""
         SELECT date, weight, muscle_mass, body_fat, visceral_fat
         FROM body_metrics
-        WHERE date BETWEEN %s AND %s
+        WHERE date >= %s::date AND date <= %s::date
         ORDER BY date ASC
     """, (start.isoformat(), end.isoformat()))
     rows = c.fetchall()
@@ -466,7 +466,6 @@ def view_menu(menu_id):
 def edit_menu(menu_id):
     conn, c = connect2DB()  # ... use c to query ...
 
-    print(f"menu ID: {menu_id}")
     if request.method == "POST":
         # Update menu metadata
         name = request.form["name"]
@@ -490,8 +489,6 @@ def edit_menu(menu_id):
                 if portion > 0:
                     c.execute("INSERT INTO menu_recipes (menu_id, recipe_id, portion) VALUES (%s, %s, %s)",
                               (menu_id, recipe_id, portion))
-        for row in recipeList:
-            print(row)
 
         # Re-insert updated ingredients
         c.execute("SELECT id FROM ingredients")
@@ -504,8 +501,6 @@ def edit_menu(menu_id):
                 amount = float(amount_str)
                 c.execute("INSERT INTO menu_items (menu_id, ingredient_id, amount) VALUES (%s, %s, %s)",
                           (menu_id, ing_id, amount))
-        for row in ingList:
-            print(row)
 
         conn.commit()
         conn.close()

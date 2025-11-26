@@ -34,21 +34,26 @@
     </tbody>
     </table>
 
-    <h3>Nutrition</h3>
-    <p>Average Calories: {{avg_calories}}</p>
+    <h3>Nutrition Stats</h3>
     <table class="macro-table">
     <thead>
         <tr>
         <th>Macro</th>
-        <th>Grams</th>
+        <th>Quantity</th>
         <th>Calories Pct</th>
         <th>Target</th>
         </tr>
     </thead>
     <tbody>
         <tr>
+        <td>Calories</td>
+        <td>{{ avg_calories }}</td>
+        <td>{{ 100 }}%</td>
+        <td>—</td>
+        </tr>
+        <tr>
         <td>Protein</td>
-        <td>{{ avg_protein }}</td>
+        <td>{{ avg_protein }}g</td>
         <td>{{ pct_protein }}%</td>
         <td>
             {% if avg_protein >= 120 %}
@@ -60,13 +65,13 @@
         </tr>
         <tr>
         <td>Carbs</td>
-        <td>{{ avg_carbs }}</td>
+        <td>{{ avg_carbs }}g</td>
         <td>{{ pct_carbs }}%</td>
         <td>—</td>
         </tr>
         <tr>
         <td>Fat</td>
-        <td>{{ avg_fat }}</td>
+        <td>{{ avg_fat }}g</td>
         <td>{{ pct_fat }}%</td>
         <td>
             {% if pct_fat < 30 %}
@@ -78,8 +83,8 @@
         </tr>
         <tr>
         <td>Fiber</td>
-        <td>{{ avg_fiber }}</td>
-        <td>-</td>
+        <td>{{ avg_fiber }}g</td>
+        <td>—</td>
         <td>
             {% if avg_fiber >= 35 %}
             ✅
@@ -91,16 +96,20 @@
     </tbody>
     </table>
     <!--<p>Use the links below to log your day:</p>-->
-    <ul>
-        <li><a href="/log/metrics">Log Body Metrics</a></li>
-        <li><a href="/charts" >View Metrics Charts</a></li>
-        <p></p>
-        <li><a href="/log/daily_menu">Log Meals</a></li>
-        <li><a href="/log/recipe">Log Recipes</a></li>
-       <li><a href="/log/ingredient">Log Ingredients</a></li>
-    </ul>
+        <h3>Metrics</h3>
+    <form class="button-container" method="GET">
+        <button type="submit" formaction="/log/metrics">Log</button>
+        <button type="submit" formaction="/charts">Chart</button>
+    </form>
 
-        <h3>Daily Menus</h3>
+        <h3>Log Nutrition</h3>
+    <form class="button-container" method="GET">
+        <button type="submit" formaction="/log/daily_menu">Daily</button>
+        <button type="submit" formaction="/log/recipe">Recipe</button>
+        <button type="submit" formaction="/log/ingredient">Ingredient</button>
+    </form>
+
+    <h3>Daily Menus</h3>
         <div class="menu-action-row">
         <!-- Shared dropdown -->
         <select id="menuSelect">

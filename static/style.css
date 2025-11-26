@@ -10,6 +10,12 @@ h1, h2 {
     margin-bottom: 10px;
 }
 
+h3 {
+    color: #2c3e50;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+}
+
 .alerts {
     list-style: none;
     padding: 10px;
@@ -29,6 +35,7 @@ form div {
 form label {
   width: 75%;
   font-weight: bold;
+  font-size: 0.9rem;
   margin: 0;
 }
 
@@ -132,25 +139,54 @@ button:hover {
 }
 
 .delete-button {
+  flex: 1 1 25%;
+  font-size: 0.9rem;
   background-color: #c00;
+  width: 100%;
   margin-top: 4px;
 }
 
 .edit-button {
+  flex: 1 1 25%;
+  font-size: 0.9rem;
   background-color: #cc0;
   color: black;
+  width: 100%;
   margin-top: 4px;
 }
 
 .view-button {
+  flex: 1 1 25%;
+  font-size: 0.9rem;
   background-color: #0c0;
   margin-top: 4px;
+  width: 100%;
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    background-color: white;
+    padding: 0%;
+    border: 0.2rem;
+    gap: .75%;
+}
+
+.button-container button {
+    flex: 1 1 25%;
+    min-width: 5%;
+    padding: 0.25rem;
+    font-size: 0.9rem;
+    margin: 0.25rem;
+    color: whitesmoke;
+    background-color: #065e98;
 }
 
 .macro-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1em;
+  margin-top: 0.2em;
 }
 .macro-table th, 
 .macro-table td {
