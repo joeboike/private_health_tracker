@@ -362,7 +362,7 @@ def get_daily_nutrition(c, start_date, end_date):
             JOIN menu_recipes mr ON m.id = mr.menu_id
             JOIN recipe_items ri ON mr.recipe_id = ri.recipe_id
             JOIN ingredients i ON ri.ingredient_id = i.id
-            WHERE m.date BETWEEN %s::DATE AND %s::DATE
+            WHERE m.date >= %s::date AND m.date <= %s::date
             GROUP BY m.date
         ),
         item_nutrition AS (
@@ -375,7 +375,7 @@ def get_daily_nutrition(c, start_date, end_date):
             FROM menus m
             JOIN menu_items mi ON m.id = mi.menu_id
             JOIN ingredients i ON mi.ingredient_id = i.id
-            WHERE m.date BETWEEN %s::DATE AND %s::DATE
+            WHERE m.date >= %s::date AND m.date <= %s::date
             GROUP BY m.date
         )
         SELECT
@@ -582,10 +582,10 @@ def home():
     c.execute("""
         SELECT AVG(weight), AVG(muscle_mass), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date BETWEEN %s AND %s
+        WHERE date >= %s::date AND date <= %s::date
     """, (start.isoformat(), end.isoformat()))
     latest = c.fetchone()
-    #print(f"Latest avg: {round(latest[0],3)}, {round(latest[1],3)}, {round(latest[2],3)}")
+    print(f"Latest avg: {round(latest[0],3)}, {round(latest[1],3)}, {round(latest[2],3)}")
 
     # Previous 7 days
     prev_end = start - timedelta(days=1)
@@ -594,10 +594,10 @@ def home():
     c.execute("""
         SELECT AVG(weight), AVG(muscle_mass), AVG(body_fat), AVG(visceral_fat)
         FROM body_metrics
-        WHERE date BETWEEN %s AND %s
+        WHERE date >= %s::date AND date <= %s::date
     """, (prev_start.isoformat(), prev_end.isoformat()))
     previous = c.fetchone()
-    #print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}")
+    print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}")
 
     end = date.today()
     start = end - timedelta(days=6)
