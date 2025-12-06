@@ -169,7 +169,7 @@ def confirm_change():
 def charts():
     # Latest 90 days
     end = date.today()
-    start = end - timedelta(days=89)
+    start = end - timedelta(days=7*30)
 
     conn, c = connect2DB()  # ... use c to query ...
     c.execute("""
@@ -181,36 +181,62 @@ def charts():
     rows = c.fetchall()
     conn.close()
 
+    dates1y=[]
+    weights1y=[]
+    muscle1y=[]
+    body_fats1y=[]
+    body_fat_lb1y=[]
+    visceral_fats1y=[]
+    coeff1y=[0.069, 0.14, 0.189, 0.204, 0.189, 0.14, 0.069] #0.04, 0.14, 0.205, 0.23, 0.205, 0.14, 0.04]
+    print (f"num rows: {len(rows)}")
+    rows = rows[-7*30:]               # trim to last 30 weeks (or fewer)
+    rows = rows[len(rows) % 7:]     # ensure length is mod 7
+    for indx, r in enumerate(rows):
+        if r[0] == None:
+            continue
+        quot, remain = divmod(indx, 7)
+        if remain == 0:
+            dates1y.append(r[0].isoformat())  # Use first date as representative
+            weights1y.append(r[1] * coeff1y[0])
+            muscle1y.append( r[2] * coeff1y[0])
+            body_fats1y.append(r[3] * coeff1y[0])
+            body_fat_lb1y.append(r[1] * r[3] * coeff1y[0] / 100)
+            visceral_fats1y.append(r[4] * coeff1y[0])
+        else:
+            weights1y[quot] += r[1] * coeff1y[remain]
+            muscle1y[quot]  += r[2] * coeff1y[remain]
+            body_fats1y[quot] += r[3] * coeff1y[remain]
+            body_fat_lb1y[quot] += (r[1] * r[3] * coeff1y[remain] / 100)
+            visceral_fats1y[quot] += r[4] * coeff1y[remain]
+            #remain == 6 and print(f"index:{quot} {weights1y[quot]} {muscle1y[quot]} {body_fats1y[quot]} {body_fat_lb1y[quot]} {visceral_fats1y[quot]}")
+
     dates90=[]
     weights90=[]
     muscle90=[]
     body_fats90=[]
     body_fat_lb90=[]
     visceral_fats90=[]
-    indx=0
-    for r in rows:
+    coeff90=[0.27, 0.46, 0.27]
+    rows = rows[-90:]               # trim to last 90 (or fewer)
+    rows = rows[len(rows) % 3:]     # ensure length is mod 3
+    for indx, r in enumerate(rows):
+        if r[0] == None:
+            continue
         quot, remain = divmod(indx, 3)
         if remain == 0:
             dates90.append(r[0].isoformat())  # Use first date as representative
-            weights90.append(r[1] * 0.25)
-            muscle90.append( r[2] * 0.25)
-            body_fats90.append(r[3] * 0.25)
-            body_fat_lb90.append(r[1] * r[3] * 0.25 / 100)
-            visceral_fats90.append(r[4] * 0.25)
-        elif remain == 1:
-            weights90[quot] += r[1]*0.5
-            muscle90[quot]  += r[2]*0.5
-            body_fats90[quot] += r[3]*0.5
-            body_fat_lb90[quot] += (r[1] * r[3] * 0.5 / 100)
-            visceral_fats90[quot] += r[4]*0.5
-        elif remain == 2:
-            weights90[quot] += r[1]*0.25
-            muscle90[quot]  += r[2]*0.25
-            body_fats90[quot] += r[3]*0.25
-            body_fat_lb90[quot] += (r[1] * r[3] * 0.25 / 100)
-            visceral_fats90[quot] += r[4]*0.25
-            #print(f"index:{quot} weight: {weights90[quot]}")
-        indx += 1
+            weights90.append(r[1] * coeff90[0])
+            muscle90.append( r[2] * coeff90[0])
+            body_fats90.append(r[3] * coeff90[0])
+            body_fat_lb90.append(r[1] * r[3] * coeff90[0] / 100)
+            visceral_fats90.append(r[4] * coeff90[0])
+        else:
+            weights90[quot] += r[1] * coeff90[remain]
+            muscle90[quot]  += r[2] * coeff90[remain]
+            body_fats90[quot] += r[3] * coeff90[remain]
+            body_fat_lb90[quot] += (r[1] * r[3] * coeff90[remain] / 100)
+            visceral_fats90[quot] += r[4] * coeff90[remain]
+            #remain == 2 and print(f"index:{quot} weight: {weights90[quot]}")
 
     #print(dates90)
     dates = [r[0].isoformat() for r in rows]
@@ -585,7 +611,7 @@ def home():
         WHERE date >= %s::date AND date <= %s::date
     """, (start.isoformat(), end.isoformat()))
     latest = c.fetchone()
-    print(f"Latest avg: {round(latest[0],3)}, {round(latest[1],3)}, {round(latest[2],3)}")
+    print(f"Latest avg: {round(latest[0],3)}, {round(latest[1],3)}, {round(latest[2],3)}, {round(latest[3],3)}")
 
     # Previous 7 days
     prev_end = start - timedelta(days=1)
@@ -597,7 +623,7 @@ def home():
         WHERE date >= %s::date AND date <= %s::date
     """, (prev_start.isoformat(), prev_end.isoformat()))
     previous = c.fetchone()
-    print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}")
+    print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}, {round(previous[3],3)}")
 
     end = date.today()
     start = end - timedelta(days=6)
@@ -627,6 +653,7 @@ def home():
     per_carb = ((avg_carbs - avg_fiber) * 4) / avg_calories if avg_calories else 0
     per_fat  = (avg_fat   * 9) / avg_calories if avg_calories else 0
 
+    print("Dec 1 updates to charting")
     # Nutrition totals
     '''totals = {"calories": avg_calories, 
               "carbs": avg_carbs, 
