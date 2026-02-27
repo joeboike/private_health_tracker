@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Macro Nutrient Charts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<button onclick="toggleCharts()">Switch Chart View</button>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div id="macroCharts" style="display:block;">
+    <h2>30 Day Macro Trend</h2>
+    <canvas id="macroChart30" width="600" height="300"></canvas>
+    <h2>90 Day Macro Trend</h2>
+    <canvas id="macroChart90" width="600" height="300"></canvas>
+    <h2>210 Day Macro Trend</h2>
+    <canvas id="macroChart210" width="600" height="300"></canvas>
+</div>
+
+<div id="macroLogCharts" style="display:none;">
+    <h2>30 Day Macro Trend</h2>
+    <canvas id="macroLogChart30" width="600" height="300"></canvas>
+    <h2>90 Day Macro Trend</h2>
+    <canvas id="macroLogChart90" width="600" height="300"></canvas>
+    <h2>210 Day Macro Trend</h2>
+    <canvas id="macroLogChart210" width="600" height="300"></canvas>
+</div>
+
+<script>
+function toggleCharts() {
+  const lin = document.getElementById("macroCharts");
+  const log = document.getElementById("macroLogCharts");
+
+  const showingLinear = lin.style.display !== "none";
+
+  lin.style.display = showingLinear ? "none" : "block";
+  log.style.display = showingLinear ? "block" : "none";
+}
+
+// -----------------------------
+// Load data from Flask
+// -----------------------------
+const dates30 = JSON.parse('{{ dates30 | safe }}');
+const calories30 = JSON.parse('{{ calories30 | safe }}');
+const protein30 = JSON.parse('{{ protein30 | safe }}');
+const carbs30 = JSON.parse('{{ carbs30 | safe }}');
+const fat30 = JSON.parse('{{ fat30 | safe }}');
+const fiber30 = JSON.parse('{{ fiber30 | safe }}');
+
+const dates90 = JSON.parse('{{ dates90 | safe }}');
+const calories90 = JSON.parse('{{ calories90 | safe }}');
+const protein90 = JSON.parse('{{ protein90 | safe }}');
+const carbs90 = JSON.parse('{{ carbs90 | safe }}');
+const fat90 = JSON.parse('{{ fat90 | safe }}');
+const fiber90 = JSON.parse('{{ fiber90 | safe }}');
+
+const dates210 = JSON.parse('{{ dates210 | safe }}');
+const calories210 = JSON.parse('{{ calories210 | safe }}');
+const protein210 = JSON.parse('{{ protein210 | safe }}');
+const carbs210 = JSON.parse('{{ carbs210 | safe }}');
+const fat210 = JSON.parse('{{ fat210 | safe }}');
+const fiber210 = JSON.parse('{{ fiber210 | safe }}');
+
+// -----------------------------
+// Chart builder helper
+// -----------------------------
+function buildMacroChart(canvasId, labels, cal, pro, carb, fat, fib) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Calories (kcal)',
+                    data: cal,
+                    borderColor: 'red',
+                    yAxisID: 'y-kcal',
+                    fill: false
+                },
+                {
+                    label: 'Protein (g)',
+                    data: pro,
+                    borderColor: 'blue',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Carbs (g)',
+                    data: carb,
+                    borderColor: 'green',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Fat (g)',
+                    data: fat,
+                    borderColor: 'orange',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Fiber (g)',
+                    data: fib,
+                    borderColor: 'purple',
+                    yAxisID: 'y-grams',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                'y-kcal': {
+                    type: 'linear',
+                    position: 'left',
+                    min: 1000,
+                    title: {
+                        display: true,
+                        text: 'Calories (kcal)'
+                    }
+                },
+                'y-grams': {
+                    type: 'logarithmic',
+                    position: 'right',
+                    min: 10,
+                    title: {
+                        display: true,
+                        text: 'Macros (grams)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function safe(v) {
+    return v === 0 ? 0.0001 : v;
+}
+
+function buildMacroLogChart(canvasId, labels, cal, pro, carb, fat, fib) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Calories (kcal)',
+                    data: cal.map(safe),
+                    borderColor: 'red',
+                    yAxisID: 'y-kcal',
+                    fill: false
+                },
+                {
+                    label: 'Protein (g)',
+                    data: pro.map(safe),
+                    borderColor: 'blue',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Carbs (g)',
+                    data: carb.map(safe),
+                    borderColor: 'green',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Fat (g)',
+                    data: fat.map(safe),
+                    borderColor: 'orange',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    label: 'Fiber (g)',
+                    data: fib.map(safe),
+                    borderColor: 'purple',
+                    yAxisID: 'y-grams',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                'y-kcal': {
+                    type: "logarithmic",
+                    position: 'left',
+                    min: 1500,
+                    title: {
+                        display: true,
+                        text: 'Calories (kcal) / Macros (grams)'
+                    }
+                },
+                'y-grams': {
+                    type: 'logarithmic',
+                    position: 'right',
+                    min: 10,
+                    title: {
+                        display: true,
+                        text: 'Macros (grams)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// -----------------------------
+// Build all charts
+// -----------------------------
+buildMacroChart("macroChart30", dates30, calories30, protein30, carbs30, fat30, fiber30);
+buildMacroChart("macroChart90", dates90, calories90, protein90, carbs90, fat90, fiber90);
+buildMacroChart("macroChart210", dates210, calories210, protein210, carbs210, fat210, fiber210);
+buildMacroLogChart("macroLogChart30", dates30, calories30, protein30, carbs30, fat30, fiber30);
+buildMacroLogChart("macroLogChart90", dates90, calories90, protein90, carbs90, fat90, fiber90);
+buildMacroLogChart("macroLogChart210", dates210, calories210, protein210, carbs210, fat210, fiber210);
+
+</script>
+</body>
+</html>

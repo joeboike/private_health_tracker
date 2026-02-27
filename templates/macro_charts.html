@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Macro Nutrient Charts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<button onclick="toggleCharts()">Switch Chart View</button>
+
+<!-- MUST load Chart.js first -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Then load the annotation plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
+
+<!-- RAW DATA VIEW -->
+<div id="macroCharts" style="display:none;">
+    <h2>30 Day Macro Trend</h2>
+    <canvas id="macroChart30"></canvas>
+
+    <h2>90 Day Macro Trend</h2>
+    <canvas id="macroChart90"></canvas>
+
+    <h2>6 Month Macro Trend</h2>
+    <canvas id="macroChart210"></canvas>
+</div>
+
+<!-- TARGET VIEW -->
+<div id="macroPctCharts" style="display:block;">
+    <h2>30 Day Macro Targets</h2>
+    <canvas id="macroPctChart30"></canvas>
+
+    <h2>90 Day Macro Targets</h2>
+    <canvas id="macroPctChart90"></canvas>
+
+    <h2>210 Day Macro Targets</h2>
+    <canvas id="macroPctChart210"></canvas>
+</div>
+
+<script>
+// ---------------------------------------------------------
+// Toggle between linear and log views
+// ---------------------------------------------------------
+function toggleCharts() {
+    const lin = document.getElementById("macroCharts");
+    const pct = document.getElementById("macroPctCharts");
+
+    const showingLinear = lin.style.display !== "none";
+
+    lin.style.display = showingLinear ? "none" : "block";
+    pct.style.display = showingLinear ? "block" : "none";
+}
+
+// ---------------------------------------------------------
+// Load data from Flask
+// ---------------------------------------------------------
+const dates30 = JSON.parse('{{ dates30 | safe }}');
+const calories30 = JSON.parse('{{ calories30 | safe }}');
+const protein30 = JSON.parse('{{ protein30 | safe }}');
+const carbs30 = JSON.parse('{{ carbs30 | safe }}');
+const fat30 = JSON.parse('{{ fat30 | safe }}');
+const fiber30 = JSON.parse('{{ fiber30 | safe }}');
+
+const dates90 = JSON.parse('{{ dates90 | safe }}');
+const calories90 = JSON.parse('{{ calories90 | safe }}');
+const protein90 = JSON.parse('{{ protein90 | safe }}');
+const carbs90 = JSON.parse('{{ carbs90 | safe }}');
+const fat90 = JSON.parse('{{ fat90 | safe }}');
+const fiber90 = JSON.parse('{{ fiber90 | safe }}');
+
+const dates210 = JSON.parse('{{ dates210 | safe }}');
+const calories210 = JSON.parse('{{ calories210 | safe }}');
+const protein210 = JSON.parse('{{ protein210 | safe }}');
+const carbs210 = JSON.parse('{{ carbs210 | safe }}');
+const fat210 = JSON.parse('{{ fat210 | safe }}');
+const fiber210 = JSON.parse('{{ fiber210 | safe }}');
+
+// ---------------------------------------------------------
+// Helper for log charts (replace zeros)
+// ---------------------------------------------------------
+function safe(v) {
+    return v === 0 ? 0.0001 : v;
+}
+
+// ---------------------------------------------------------
+// Hybrid bar+line chart builder (linear)
+// ---------------------------------------------------------
+function buildMacroChart(canvasId, labels, cal, pro, carb, fat, fib) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    fill: true,
+                    label: 'Calories (kcal)',
+                    data: cal,
+                    backgroundColor: 'rgba(255, 99, 132, 0.4)',
+                    borderColor: 'rgba(255, 99, 132, 0.4)',
+                    yAxisID: 'y-kcal'
+                },
+                {
+                    type: 'line',
+                    label: 'Protein (g)',
+                    data: pro,
+                    borderColor: 'blue',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    type: 'line',
+                    label: 'Carbs (g)',
+                    data: carb,
+                    borderColor: 'green',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    type: 'line',
+                    label: 'Fat (g)',
+                    data: fat,
+                    borderColor: 'red',
+                    yAxisID: 'y-grams',
+                    fill: false
+                },
+                {
+                    type: 'line',
+                    label: 'Fiber (g)',
+                    data: fib,
+                    borderColor: 'purple',
+                    yAxisID: 'y-grams',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                'y-kcal': {
+                    type: 'linear',
+                    max: 4000,
+                    position: 'left',
+                    title: { display: true, text: 'Calories (kcal)' }
+                },
+                'y-grams': {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'Macros (grams)' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
+function pctOfTarget(value, target) {
+    return (value / target) * 100;
+}
+
+function fatPctOfLimit(fatGrams, calories, limitPct = 30) {
+    if (calories === 0) return 0;  // avoid divide-by-zero
+    const fatCalories = fatGrams * 9;
+    const pctOfCalories = (fatCalories / calories) * 100;
+    return (pctOfCalories / limitPct) * 100;
+}
+
+function buildMacroPctChart(canvasId, labels, fiberPct, proteinPct, fatPct) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Fiber (% of 35g)',
+                    data: fiberPct,
+                    borderColor: 'green',
+                    fill: false
+                },
+                {
+                    label: 'Protein (% of 120g)',
+                    data: proteinPct,
+                    borderColor: 'blue',
+                    fill: false
+                },
+                {
+                    label: 'Fat (% of 30% limit)',
+                    data: fatPct,
+                    borderColor: 'orange',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    type: 'linear',
+                    min: 0,
+                    max: 200,
+                    title: {
+                        display: true,
+                        text: '% of Target'
+                    }
+                }
+            },
+            plugins: {
+                annotation: {
+                    annotations: {
+                        goalLine: {
+                            type: 'line',
+                            yMin: 100,
+                            yMax: 100,
+                            borderColor: 'red',
+                            borderWidth: 3,
+                            borderDash: [6, 4],   // optional: dashed line
+                            label: {
+                                display: true,
+                                content: 'Goal (100%)',
+                                color: 'red',
+                                backgroundColor: 'white',
+                                font: {
+                                    weight: 'bold'
+                                },
+                                position: 'start'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ---------------------------------------------------------
+// Build all charts
+// ---------------------------------------------------------
+buildMacroChart("macroChart30", dates30, calories30, protein30, carbs30, fat30, fiber30);
+buildMacroChart("macroChart90", dates90, calories90, protein90, carbs90, fat90, fiber90);
+buildMacroChart("macroChart210", dates210, calories210, protein210, carbs210, fat210, fiber210);
+
+const fiberPct30 = fiber30.map(v => pctOfTarget(v, 35));
+const proteinPct30 = protein30.map(v => pctOfTarget(v, 120));
+const fatPct30 = fat30.map((fat, i) => fatPctOfLimit(fat, calories30[i]));
+
+const fiberPct90 = fiber90.map(v => pctOfTarget(v, 35));
+const proteinPct90 = protein90.map(v => pctOfTarget(v, 120));
+const fatPct90 = fat90.map((fat, i) => fatPctOfLimit(fat, calories90[i]));
+
+const fiberPct210 = fiber210.map(v => pctOfTarget(v, 35));
+const proteinPct210 = protein210.map(v => pctOfTarget(v, 120));
+const fatPct210 = fat210.map((fat, i) => fatPctOfLimit(fat, calories210[i]));
+
+buildMacroPctChart("macroPctChart30", dates30, fiberPct30, proteinPct30, fatPct30);
+buildMacroPctChart("macroPctChart90", dates90, fiberPct90, proteinPct90, fatPct90);
+buildMacroPctChart("macroPctChart210", dates210, fiberPct210, proteinPct210, fatPct210);
+</script>
+</body>
+</html>

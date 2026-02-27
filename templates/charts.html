@@ -10,17 +10,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div id="percentCharts">
-<h2>30-Day Body Metrics Trend</h2>
-<canvas id="weightChart30_pct" width="600" height="300"></canvas>
-<h2>90-Day Body Metrics Trend</h2>
-<canvas id="weightChart90_pct" width="600" height="300"></canvas>
+<h2>30 Day Body Metrics Trend</h2>
+<canvas id="percentChart30_pct" width="600" height="300"></canvas>
+<h2>90 Day Body Metrics Trend</h2>
+<canvas id="percentChart90_pct" width="600" height="300"></canvas>
+<h2>1 Year Body Metrics Trend</h2>
+<canvas id="percentChart1y_pct" width="600" height="300"></canvas>
 </div>
 
 <div id="poundCharts"  style="display:none;">
-<h2>30-Day Body Metrics Trend</h2>
+<h2>30 Day Body Metrics Trend</h2>
 <canvas id="weightChart30_lbs" width="600" height="300"></canvas>
-<h2>90-Day Body Metrics Trend</h2>
+<h2>90 Day Body Metrics Trend</h2>
 <canvas id="weightChart90_lbs" width="600" height="300"></canvas>
+<h2>1 Year Body Metrics Trend</h2>
+<canvas id="weightChart1y_lbs" width="600" height="300"></canvas>
 </div>
 
 <script>
@@ -64,214 +68,141 @@ const viscFats90 = viscFats9.slice(-30);
 const muscle90 = muscle9.slice(-30);
 const fat_lb90 = fat_lb9.slice(-30);
 
-new Chart(document.getElementById('weightChart30_pct'), {
-    type: 'line',
-    data: {
-        labels: last30,
-        datasets: [{
-            label: 'Weight (lbs)',
-            data: weight30,
-            borderColor: 'blue',
-            yAxisID: 'y-weight',
-            fill: false
-            },
-            {
-            label: 'Body Fat (%)',
-            data: bodyFats30,
-            borderColor: 'green',
-            yAxisID: 'y-fat',
-            fill: false
-            },
-            {
-            label: 'Visceral Fat',
-            data: viscFats30,
-            borderColor: 'brown',
-            yAxisID: 'y-fat',
-            fill: false
-            }
-        ]
-    },
-    options: {
-        scales: {
-            'y-weight': {
-                type: 'linear',
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Weight (lbs)'
-                }
-            },
-            'y-fat': {
-                type: 'linear',
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Body Fat (%)'
-                },
-                grid: {
-                    drawOnChartArea: false
-                }
-            }
-        }
-    }
-});
+const dates1y = JSON.parse('{{ dates1y | safe }}');
+const weights1y = JSON.parse('{{ weights1y | safe }}');
+const bodyFats1y = JSON.parse('{{ body_fats1y | safe }}');
+const viscFats1y = JSON.parse('{{ visceral_fats1y | safe }}');
+const muscle1y = JSON.parse('{{muscle_lb1y | safe}}');
+const fat_lb1y = JSON.parse('{{body_fat_lb1y | safe}}');
 
-new Chart(document.getElementById('weightChart90_pct'), {
-    type: 'line',
-    data: {
-        labels: last90,
-        datasets: [
-            {
+const last60w = dates1y.slice(-60);
+const weight60w = weights1y.slice(-60);
+const bodyFats60w = bodyFats1y.slice(-60);
+const viscFats60w = viscFats1y.slice(-60);
+const muscle60w = muscle1y.slice(-60);
+const fat_lb60w = fat_lb1y.slice(-60);
+
+function buildMetricsChart(canvasId, labels, weight, fatpct, vFat) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
                 label: 'Weight (lbs)',
-                data: weight90,
+                data: weight,
                 borderColor: 'blue',
                 yAxisID: 'y-weight',
                 fill: false
-            },
-            {
+                },
+                {
                 label: 'Body Fat (%)',
-                data: bodyFats90,
-                borderColor: 'green',
+                data: fatpct,
+                borderColor: 'orange',
                 yAxisID: 'y-fat',
                 fill: false
-            },
-            {
+                },
+                {
                 label: 'Visceral Fat',
-                data: viscFats90,
-                borderColor: 'brown',
+                data: vFat,
+                borderColor: 'purple',
                 yAxisID: 'y-fat',
                 fill: false
-            }
-        ]
-    },
-    options: {
-        scales: {
-            'y-weight': {
-                type: 'linear',
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Weight (lbs)'
                 }
-            },
-            'y-fat': {
-                type: 'linear',
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Body Fat (%)'
+            ]
+        },
+        options: {
+            scales: {
+                'y-weight': {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Weight (lbs)'
+                    }
                 },
-                grid: {
-                    drawOnChartArea: false
+                'y-fat': {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Body Fat (%)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
                 }
             }
         }
-    }
-});
+    });
+}
 
-new Chart(document.getElementById('weightChart30_lbs'), {
-    type: 'line',
-    data: {
-        labels: last30,
-        datasets: [{
-            label: 'Weight (lbs)',
-            data: weight30,
-            borderColor: 'blue',
-            yAxisID: 'y-weight',
-            fill: false
-            },
-            {
-            label: 'Muscle (lbs)',
-            data: muscle30,
-            borderColor: 'green',
-            yAxisID: 'y-fat',
-            fill: false
-            },
-            {
-            label: 'Body Fat (lbs)',
-            data: fat_lb30,
-            borderColor: 'brown',
-            yAxisID: 'y-fat',
-            fill: false
-            }
-        ]
-    },
-    options: {
-        scales: {
-            'y-weight': {
-                type: 'linear',
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Weight (lbs)'
-                }
-            },
-            'y-fat': {
-                type: 'linear',
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Muscle / Body Fat (lbs)'
-                },
-                grid: {
-                    drawOnChartArea: false
-                }
-            }
-        }
-    }
-});
-
-new Chart(document.getElementById('weightChart90_lbs'), {
-    type: 'line',
-    data: {
-        labels: last90,
-        datasets: [
-            {
-                label: 'Weight (lbs)',
-                data: weight90,
+function buildMetricsLbChart(canvasId, labels, weight, muscle, fatLb) {
+    new Chart(document.getElementById(canvasId), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                label: 'Weight',
+                data: weight,
                 borderColor: 'blue',
                 yAxisID: 'y-weight',
                 fill: false
-            },
-            {
-                label: 'Muscle (lbs)',
-                data: muscle90,
-                borderColor: 'green',
-                yAxisID: 'y-fat',
-                fill: false
-            },
-            {
-                label: 'Body Fat (lbs)',
-                data: fat_lb90,
-                borderColor: 'brown',
-                yAxisID: 'y-fat',
-                fill: false
-            }
-        ]
-    },
-    options: {
-        scales: {
-            'y-weight': {
-                type: 'linear',
-                position: 'left',
-                title: {
-                    display: true,
-                    text: 'Weight (lbs)'
-                }
-            },
-            'y-fat': {
-                type: 'linear',
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Muscle / Body Fat (lbs)'
                 },
-                grid: {
-                    drawOnChartArea: false
+                {
+                label: 'Muscle',
+                data: muscle,
+                borderColor: 'green',
+                yAxisID: 'y-muscleFat',
+                fill: false
+                },
+                {
+                label: 'Fat',
+                data: fatLb,
+                borderColor: 'orange',
+                yAxisID: 'y-muscleFat',
+                fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                'y-weight': {
+                    type: 'linear',
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Weight (lbs)'
+                    }
+                },
+                'y-muscleFat': {
+                    type: 'linear',
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Muscle/ Fat (lbs)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
                 }
             }
         }
-    }
-});
+    });
+}
+
+// -----------------------------
+// Build all charts
+// -----------------------------
+// Percent charts
+buildMetricsChart("percentChart30_pct", last30, weight30, bodyFats30, viscFats30);
+buildMetricsChart("percentChart90_pct", last90, weight90, bodyFats90, viscFats90);
+buildMetricsChart("percentChart1y_pct", last60w, weight60w, bodyFats60w, viscFats60w);
+
+// Pound charts
+buildMetricsLbChart("weightChart30_lbs", last30, weight30, muscle30, fat_lb30);
+buildMetricsLbChart("weightChart90_lbs", last90, weight90, muscle90, fat_lb90);
+buildMetricsLbChart("weightChart1y_lbs", last60w, weight60w, muscle60w, fat_lb60w);
 </script>
 </body>

@@ -9,6 +9,7 @@ app.secret_key = "My_$up3r_$3cr3t_K3y"  # Needed for flashing messagesimport sql
 your_password_here="VX7sSpMrAQe5bxpl"     #"Password1" internal postgresql db
 
 def connect2DB() :
+    print("DATABASEURL =", os.environ.get("DATABASEURL"))
     conn = psycopg2.connect(os.environ["DATABASEURL"])
     return conn, conn.cursor()
     '''conn = psycopg2.connect(
@@ -165,11 +166,40 @@ def confirm_change():
         flags=session.get("change_flags")
     )
 
+def smooth_timeseries(rows, coeffs, extract_fn):
+    """   rows: list of DB rows
+    coeffs: list of FIR weights
+    extract_fn: function(row) -> tuple of numeric values to smooth
+                e.g., lambda r: (r[1], r[2], r[3], r[4])
+    """
+    window = len(coeffs)    # window: number of samples per smoothing group (e.g., 7 or 3)
+    print(f"rows: {len(rows)}, window: {window}")
+    rows = rows[len(rows) % window:]    # Trim to multiple of window
+    print(f"post trim: {len(rows)}")
+
+    # Prepare output lists
+    smoothed = []
+    dates = []
+
+    # Process in sliding window
+    for idx, r in enumerate(rows):
+        quot, remain = divmod(idx, window)
+        values = extract_fn(r)
+
+        if remain == 0:
+            dates.append(r[0].isoformat())
+            smoothed.append([v * coeffs[0] for v in values])
+        else:
+            for i, v in enumerate(values):
+                smoothed[quot][i] += v * coeffs[remain]
+
+    return dates, smoothed
+
 @app.route("/charts")
 def charts():
     # Latest 90 days
     end = date.today()
-    start = end - timedelta(days=7*30)
+    start = end - timedelta(days=65*7)  # go back 5 extra weeks to cover missing days
 
     conn, c = connect2DB()  # ... use c to query ...
     c.execute("""
@@ -181,70 +211,49 @@ def charts():
     rows = c.fetchall()
     conn.close()
 
-    dates1y=[]
-    weights1y=[]
-    muscle1y=[]
-    body_fats1y=[]
-    body_fat_lb1y=[]
-    visceral_fats1y=[]
+################  1 yr (60 week)   #########################
     coeff1y=[0.069, 0.14, 0.189, 0.204, 0.189, 0.14, 0.069] #0.04, 0.14, 0.205, 0.23, 0.205, 0.14, 0.04]
-    print (f"num rows: {len(rows)}")
-    rows = rows[-7*30:]               # trim to last 30 weeks (or fewer)
-    rows = rows[len(rows) % 7:]     # ensure length is mod 7
-    for indx, r in enumerate(rows):
-        if r[0] == None:
-            continue
-        quot, remain = divmod(indx, 7)
-        if remain == 0:
-            dates1y.append(r[0].isoformat())  # Use first date as representative
-            weights1y.append(r[1] * coeff1y[0])
-            muscle1y.append( r[2] * coeff1y[0])
-            body_fats1y.append(r[3] * coeff1y[0])
-            body_fat_lb1y.append(r[1] * r[3] * coeff1y[0] / 100)
-            visceral_fats1y.append(r[4] * coeff1y[0])
-        else:
-            weights1y[quot] += r[1] * coeff1y[remain]
-            muscle1y[quot]  += r[2] * coeff1y[remain]
-            body_fats1y[quot] += r[3] * coeff1y[remain]
-            body_fat_lb1y[quot] += (r[1] * r[3] * coeff1y[remain] / 100)
-            visceral_fats1y[quot] += r[4] * coeff1y[remain]
-            #remain == 6 and print(f"index:{quot} {weights1y[quot]} {muscle1y[quot]} {body_fats1y[quot]} {body_fat_lb1y[quot]} {visceral_fats1y[quot]}")
+    #print (f"num rows: {len(rows)}")
+    rows1y = rows[-7*60:]               # trim to last 60 weeks (or fewer)
+    dates1y, sm1y = smooth_timeseries(
+        rows1y,
+        coeffs=coeff1y,
+        extract_fn=lambda r: (
+            r[1],                     # weight
+            r[2],                     # muscle
+            r[3],                     # body fat %
+            r[1] * r[3] / 100.0,      # body fat lbs
+            r[4]                      # visceral fat
+        )
+    )
+    weights1y, muscle1y, body_fats1y, body_fat_lb1y, visceral_fats1y = zip(*sm1y) if sm1y else ([], [], [], [], [])
 
-    dates90=[]
-    weights90=[]
-    muscle90=[]
-    body_fats90=[]
-    body_fat_lb90=[]
-    visceral_fats90=[]
+    #################  90 days   #############################
     coeff90=[0.27, 0.46, 0.27]
-    rows = rows[-90:]               # trim to last 90 (or fewer)
-    rows = rows[len(rows) % 3:]     # ensure length is mod 3
-    for indx, r in enumerate(rows):
-        if r[0] == None:
-            continue
-        quot, remain = divmod(indx, 3)
-        if remain == 0:
-            dates90.append(r[0].isoformat())  # Use first date as representative
-            weights90.append(r[1] * coeff90[0])
-            muscle90.append( r[2] * coeff90[0])
-            body_fats90.append(r[3] * coeff90[0])
-            body_fat_lb90.append(r[1] * r[3] * coeff90[0] / 100)
-            visceral_fats90.append(r[4] * coeff90[0])
-        else:
-            weights90[quot] += r[1] * coeff90[remain]
-            muscle90[quot]  += r[2] * coeff90[remain]
-            body_fats90[quot] += r[3] * coeff90[remain]
-            body_fat_lb90[quot] += (r[1] * r[3] * coeff90[remain] / 100)
-            visceral_fats90[quot] += r[4] * coeff90[remain]
-            #remain == 2 and print(f"index:{quot} weight: {weights90[quot]}")
-
+    rows90 = rows[-90:]               # trim to last 90 (or fewer)
+    dates90, sm90 = smooth_timeseries(
+        rows90,
+        coeffs=coeff90,
+        extract_fn=lambda r: (
+            r[1],
+            r[2],
+            r[3],
+            r[1] * r[3] / 100.0,
+            r[4]
+        )
+    )
+    weights90, muscle90, body_fats90, body_fat_lb90, visceral_fats90 = zip(*sm90) if sm90 else ([], [], [], [], [])
     #print(dates90)
-    dates = [r[0].isoformat() for r in rows]
-    weights = [r[1] for r in rows]
-    muscle  = [r[2] for r in rows]
-    body_fats = [r[3] for r in rows]
-    body_fat_lb = [r[1] * r[3] / 100.0 for r in rows]
-    visceral_fats = [r[4] for r in rows]
+
+    ############   30 days   ##############################3
+    rows30 = rows[-30:]
+
+    dates = [r[0].isoformat() for r in rows30]
+    weights = [r[1] for r in rows30]
+    muscle  = [r[2] for r in rows30]
+    body_fats = [r[3] for r in rows30]
+    body_fat_lb = [r[1] * r[3] / 100.0 for r in rows30]
+    visceral_fats = [r[4] for r in rows30]
 
     return render_template("charts.html",
         dates=json.dumps(dates),
@@ -258,7 +267,13 @@ def charts():
         muscle_lb90=json.dumps(muscle90),
         body_fats90=json.dumps(body_fats90),
         body_fat_lb90=json.dumps(body_fat_lb90),
-        visceral_fats90=json.dumps(visceral_fats90)
+        visceral_fats90=json.dumps(visceral_fats90),
+        dates1y=json.dumps(dates1y),
+        weights1y=json.dumps(weights1y),
+        muscle_lb1y=json.dumps(muscle1y),
+        body_fats1y=json.dumps(body_fats1y),
+        body_fat_lb1y=json.dumps(body_fat_lb1y),
+        visceral_fats1y=json.dumps(visceral_fats1y)
     )
 
 @app.route("/log/ingredient", methods=["GET", "POST"])
@@ -296,8 +311,9 @@ def log_recipe():
         notes = request.form.get("notes")
 
         # Insert recipe
-        c.execute("INSERT INTO recipes (name, notes) VALUES (%s, %s)", (name, notes))
-        recipe_id = c.lastrowid
+        c.execute(
+            "INSERT INTO recipes (name, notes) VALUES (%s, %s) RETURNING id", (name, notes))
+        recipe_id = c.fetchone()[0]
 
         # Insert recipe items
         for key in request.form:
@@ -413,7 +429,8 @@ def get_daily_nutrition(c, start_date, end_date):
             COALESCE(rn.fat, 0) + COALESCE(inu.fat, 0) AS total_fat
         FROM date_range d
         LEFT JOIN recipe_nutrition rn ON d.date = rn.date
-        LEFT JOIN item_nutrition inu ON d.date = inu.date;
+        LEFT JOIN item_nutrition inu ON d.date = inu.date
+        ORDER BY d.date ASC;
     """, (start_date, end_date, start_date, end_date, start_date, end_date))
     return c.fetchall()
 
@@ -573,6 +590,98 @@ def delete_menu(menu_id):
     flash("🗑️ Menu deleted successfully.")
     return redirect("/")
 
+@app.route("/macro_charts")
+def macro_charts():
+    end = date.today() - timedelta(days=1) 
+    start = end - timedelta(days=210)   # enough for 210-day smoothing
+
+    conn, c = connect2DB()
+    raw_rows = get_daily_nutrition(c, start.isoformat(), end.isoformat())
+    conn.close()
+
+    # -----------------------------
+    # 210-DAY (30-week) SMOOTHED
+    # -----------------------------
+    rows_210 = raw_rows[-210:]
+    coeff210 = [0.069, 0.14, 0.189, 0.204, 0.189, 0.14, 0.069]
+
+    dates210, sm210 = smooth_timeseries(
+        rows_210,
+        coeffs=coeff210,
+        extract_fn=lambda r: (
+            r[1],  # calories
+            r[2],  # carbs
+            r[3],  # protein
+            r[4],  # fiber
+            r[5]   # fat
+        )
+    )
+
+    calories210, carbs210, protein210, fiber210, fat210 = zip(*sm210) if sm210 else ([], [], [], [], [])
+
+    # -----------------------------
+    # 90-DAY SMOOTHED
+    # -----------------------------
+    rows_90 = raw_rows[-90:]
+    coeff90 = [0.27, 0.46, 0.27]
+
+    dates90, sm90 = smooth_timeseries(
+        rows_90,
+        coeffs=coeff90,
+        extract_fn=lambda r: (
+            r[1],  # calories
+            r[2],  # carbs
+            r[3],  # protein
+            r[4],  # fiber
+            r[5]   # fat
+        )
+    )
+
+    calories90, carbs90, protein90, fiber90, fat90 = zip(*sm90) if sm90 else ([], [], [], [], [])
+
+    # -----------------------------
+    # 30-DAY RAW
+    # -----------------------------
+    rows_30 = raw_rows[-30:]
+
+    dates30 = [r[0].isoformat() for r in rows_30]
+    calories30 = [r[1] for r in rows_30]
+    carbs30 = [r[2] for r in rows_30]
+    protein30 = [r[3] for r in rows_30]
+    fiber30 = [r[4] for r in rows_30]
+    fat30 = [r[5] for r in rows_30]
+
+    # -----------------------------
+    # Render template
+    # -----------------------------
+    return render_template(
+        "macro_charts.html",
+
+        # 30-day raw
+        dates30=json.dumps(dates30),
+        calories30=json.dumps(calories30),
+        carbs30=json.dumps(carbs30),
+        protein30=json.dumps(protein30),
+        fiber30=json.dumps(fiber30),
+        fat30=json.dumps(fat30),
+
+        # 90-day smoothed
+        dates90=json.dumps(dates90),
+        calories90=json.dumps(calories90),
+        carbs90=json.dumps(carbs90),
+        protein90=json.dumps(protein90),
+        fiber90=json.dumps(fiber90),
+        fat90=json.dumps(fat90),
+
+        # 210-day smoothed
+        dates210=json.dumps(dates210),
+        calories210=json.dumps(calories210),
+        carbs210=json.dumps(carbs210),
+        protein210=json.dumps(protein210),
+        fiber210=json.dumps(fiber210),
+        fat210=json.dumps(fat210)
+    )
+
 def limit_flag(value, min_limit, max_limit):
     if value is None:
         return ""
@@ -625,12 +734,12 @@ def home():
     previous = c.fetchone()
     print (f"Previous avg: {round(previous[0],3)}, {round(previous[1],3)}, {round(previous[2],3)}, {round(previous[3],3)}")
 
-    end = date.today()
-    start = end - timedelta(days=6)
+    end = date.today() - timedelta(days=1)
+    start = end - timedelta(days=7)
     week_data = get_daily_nutrition(c, start.isoformat(), end.isoformat())
-    '''print(f"today? {end}")
-    for row in week_data:
-        print(row)'''
+    '''for idx, r in enumerate(week_data):
+        print(idx, r)'''
+
     avg_calories = round(sum(row[1] for row in week_data) / len(week_data), 0)
     avg_carbs = round(sum(row[2] for row in week_data) / len(week_data), 0)
     avg_prot = round(sum(row[3] for row in week_data) / len(week_data), 0)
@@ -653,7 +762,7 @@ def home():
     per_carb = ((avg_carbs - avg_fiber) * 4) / avg_calories if avg_calories else 0
     per_fat  = (avg_fat   * 9) / avg_calories if avg_calories else 0
 
-    print("Dec 1 updates to charting")
+    print("Jan 25 updates to charting")
     # Nutrition totals
     '''totals = {"calories": avg_calories, 
               "carbs": avg_carbs, 
